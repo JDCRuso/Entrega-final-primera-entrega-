@@ -1,89 +1,88 @@
-import { Router } from "express";
-const router=router();
+import { Router } from 'express';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import ProductManager from '../Service/ProductManager.js';
+import { error } from 'node:console';
+
+const router = Router();
 
 // Simulamos una DB
-let product = []
+const filePath= './Base de datos/Productos.json'
+let productManager = new ProductManager();
 
-// Listar todos los usuarios
+
+router.get("/",async(req,res)=> {
+console.log("consultando productos GET.");
+try{
+let products=await productManager.consultarProduct()
+const limit= req.query.limit;
+
+if(limit){
+    products= products.slice(0,parseInt(limit));
+}
+res.send(products);
+}
+catch(error){
+console.log("Error al consultar un producto:"+ error);
+res.status(500,{error:"Error consultando productos", mensagge :error})
+}
+
+}) 
+
+
+// Crear o dar de alta un producto
+router.post('/', async(req, res) => {
+    try{
+    console.log("llamadoa crear un producto:");
+    const newProduct = req.body;
+
+    // Asignamos un ID
+    const numRandom = Math.floor(Math.random() * 100 + 1);
+    newProduct.id = numRandom;
+
+    await productManager.crearProducto(newProduct.titulo, newProduct.descripcion, newProduct.precio, newProduct.imagen,newProduct.stock, newProduct.codigo,newProduct.id);
+
+    res.status(201).send({ mensaje: "Producto creado con exito " + newProduct.id });  
+} catch (error){
+    console.log("Error guardando producto. Error: " + error); 
+    res.status(500).send({error: "Error guardando producto", mensagge: error});
+
+}
+});
+
+
 router.get('/', (req, res) => {
-    res.send(product);
+    res.json(productManager);
 })
 
-// Crear o dar de alta un usurio
-router.post('/', (req, res) => {
-    console.log(req.body);
-    let product= req.body
-
-    // Asiognamos un ID
-    const numRamdom = Math.floor(Math.random() * 100 + 1)
-    product.id = numRamdom
-
-    if (!product.titulo || !product.descripcion || !product.precio || !product.imagen || !product.stock || !product.codigo) {
-        return res.status(400).send({ status: "error", msg: "valores incompletos, revisar datos de entrada!!" })
-    }
-
-    product.push(user)
-    res.send({ status: "Success", msg: 'Producto creado!!' })
-})
 
 // ACTUALIZAR
-router.put('/:poductId', (req, res) => {
-    // capturo el id
-    let productId = parseInt(req.params.productId)
+router.put('/:productId', async (req, res) => {
+    try {
+        const productId = parseInt(req.params.productId);
+        const updatedProductData = req.body;
 
-    // capturo info del req.body
-    let productUpdate = req.body
+        await productManager.actualizarProducto(productId, updatedProductData);
 
-    const productPosition = users.findIndex((u => u.id === productId));
-
-    if (productPosition < 0) {
-        return response.status(202).send({ status: "info", error: "Producto no encontrado" });
+        res.status(200).json({ status: 'Success', message: 'Producto actualizado correctamente.' });
+    } catch (error) {
+        console.error('Error al actualizar el producto:', error);
+        res.status(500).json({ status: 'Error', message: 'No se pudo actualizar el producto.' });
     }
+});
 
-    u[productPosition] = productUpdate;
+// ELIMINAR
+router.delete('/:productId', async (req, res) => {
+    try {
+        const productId = parseInt(req.params.productId);
 
-    res.send({ status: "Success", message: "Producto Actualizado.", data: users[userPosition] }); //Si no se indica retorna status HTTP 200OK.
+        await productManager.eliminarProducto(productId);
 
-})
-
-
-// DELETE
-router.delete('/:productId', (req, res) => {
-    let productId = parseInt(req.params.productId);
-
-    // tomamos el tamanio del array antes de elimanr el registro
-    const productSize = product.length;
-
-
-    // buscamos el registro por el id
-    const productPosition = product.findIndex((u => u.id === productId));
-    if (productPosition < 0) {
-        return response.status(202).send({ status: "info", error: "Producto no encontrado" });
+        res.status(200).json({ status: 'Success', message: 'Producto eliminado correctamente.' });
+    } catch (error) {
+        console.error('Error al eliminar el producto:', error);
+        res.status(500).json({ status: 'Error', message: 'No se pudo eliminar el producto.' });
     }
-
-    // Eliminamos el registro
-    product.splice(productPosition, 1);
-    if (product.length === productSize) {
-        return response.status(500).send({ status: "error", error: "Usuario no se pudo borrar." });
-    }
-
-
-    res.send({ status: "Success", message: "Producto Eliminado." }); //Si no se indica retorna status HTTP 200 OK.
-
-})
-
-
-
-
-
-
-
-
-
-
-
-
-
+});
 
 
 
